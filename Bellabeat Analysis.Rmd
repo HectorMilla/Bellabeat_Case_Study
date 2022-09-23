@@ -1,0 +1,263 @@
+---
+title: "Bellabeat Analysis"
+author: "Hector Milla"
+date: "2022-09-22"
+output: 
+  html_document: 
+    css: ~/rmarkdown.css
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+<br>
+
+# Bellabeat
+
+<br>
+
+Bellabeat is a high-tech company that manufactures health-focused smart products.Since it was founded in 2013, Bellabeat has grown rapidly and quickly positioned itself as a tech-driven wellness company for women. [Bellabeat Website](https://bellabeat.com/)
+
+<br>
+
+# Purpose of analysis
+
+<br>
+
+To analyze smart device usage data in order to gain insight into how consumers use non-Bellabeat smart devices. Apply these insights into improving the [Time](https://bellabeat.com/time/) Bellabeat product.
+
+<br>
+
+# Potential insights of analysis
+
+1. What are some trends in smart device usage? 
+2. How could these trends apply to Bellabeat customers? 
+3. How could these trends help influence Bellabeat marketing strategy?
+
+
+
+# Installing and loading required packages
+
+<br>
+```{r}
+  install.packages("tidyverse", repos='http://cran.us.r-project.org')
+  library(tidyverse)
+  library(lubridate)
+```
+
+<br>
+
+# Get the data 
+
+<br>
+
+We will be working with the [FitBit Fitness Tracker Data](https://www.kaggle.com/datasets/arashnic/fitbit) (CC0: Public Domain, dataset made available through [Mobius](https://www.kaggle.com/arashnic))
+
+<br>
+
+```{r}
+sleep_data <- read.csv("fitbitdata/sleepDay_merged.csv")
+daily_activity <- read.csv("fitbitdata/dailyActivity_merged.csv")
+hourly_steps <- read.csv("fitbitdata/hourlySteps_merged.csv")
+```
+
+***
+
+# Preview the data (looking at column names)
+
+<br>
+
+```{r}
+colnames(sleep_data)
+```
+
+```{r}
+colnames(daily_activity)
+```
+
+```{r}
+colnames(hourly_steps)
+```
+***
+
+# Format the data
+
+<br>
+```{r}
+###Changed TotalTimeInBed to ToltalMinutesInBed for consistency and clarity####
+
+sleep_data <-  rename(sleep_data, TotalMinutesInBed = TotalTimeInBed)
+
+###Separated the dates/time in the ActivityHour column into Date and Time columns###
+
+hourly_steps <- hourly_steps %>%
+  mutate(
+    ActivityHour = parse_date_time(
+      ActivityHour, "m/d/Y I:M:S p"
+    )
+  ) %>% 
+  mutate(
+    Date = as.Date(ActivityHour),
+    Time = format(ActivityHour, format = "%H:%M:%S")
+  )
+
+```
+
+***
+
+<br>
+
+# Exploratory analysis of data
+
+<br>
+
+#### Number of entries for each data set
+
+<br>
+
+```{r}
+n_distinct(daily_activity)
+
+n_distinct(sleep_data)
+
+n_distinct(hourly_steps)
+```
+<br>
+
+#### Analyzing summary statistics for each data set
+
+<br>
+
+```{r}
+daily_activity %>% 
+  select(TotalSteps, SedentaryMinutes, Calories) %>% 
+  summary() 
+```
+
+<br>
+
+We can use the summary of total steps to set goals for users and notify them with an encouraging message everytime they cross one of these miles stones, such as when their total steps are higher than the average user
+
+<br>
+
+```{r}
+sleep_data %>% 
+  select(TotalMinutesAsleep, TotalMinutesInBed, TotalSleepRecords) %>% 
+  summary()
+```
+<br>
+
+On average it takes users 39 minutes to enter into a sleep state and they sleep for an average of 7 hours. None of the users recorded more than one sleep record per day so BellaBeat could add a feature for users that take naps often.
+
+<br>
+
+```{r}
+hourly_steps %>% 
+  select(Time, StepTotal) %>% 
+  group_by(Time) %>% 
+  summarise(avg_steps = mean(StepTotal)) %>% 
+  print(n=24)
+```
+<br>
+
+Users on average have a higher step count around 6 pm. BellaBeat can add features to remind and encourage users to keep being active around this time.
+
+<br>
+
+***
+
+
+# Visualization  
+
+<br>
+
+#### Daily activity data
+
+<br>
+
+```{r}
+###show relation between total steps and calories
+daily_activity %>% 
+ggplot( aes(x= TotalSteps, y= Calories))+
+  geom_point(colour= "orange")+
+  geom_smooth(colour= "blue")+
+  labs(title="Total Steps vs Calories Burned (Daily)") +
+  xlab("Total Steps") + ylab("Calories Burned") +
+  theme(axis.title.x = element_text(margin = margin(t = 15, b= 15)))+
+  theme(axis.title.y = element_text(margin = margin(r = 15, l= 15)))+
+  theme(plot.background=element_rect(fill='#e3fbff'))+
+  theme(plot.title=element_text(size=15, vjust=3,margin = margin(t = 15, b=15)))
+```
+
+<br>
+
+We see a positive corrolation between the total amount of steps and total calories burned. We can use this information to recomend BellaBeat products to use reminders and encouraging messages for people that want to lose weigt
+
+<br>
+
+
+#### Sleep data
+
+<br>
+```{r}
+## show relation between total time asleep and how much total time in bed
+ggplot(data = sleep_data, aes(x= TotalMinutesAsleep, y= TotalMinutesInBed, ))+
+  geom_point(colour = "skyblue", size= 3)+
+  geom_smooth(colour= "green")+
+  labs(title="Total Minutes in Bed vs Total Minutes Asleep (Daily)", ) +
+  xlab("Total Minutes Asleep") + ylab("Total Minutes In Bed")+
+  theme(axis.title.x = element_text(margin = margin(t = 15, b= 15)))+
+  theme(axis.title.y = element_text(margin = margin(r = 15, l= 15)))+
+  theme(plot.background=element_rect(fill='orange'))+
+  theme(plot.title=element_text(size=15, vjust=3,margin = margin(t = 15, b=15)))
+```
+
+<br>
+
+There is a positive correlation in between the total time users spend in bed and the total time users are actually asleep. Bella beat can use this information to recomend better sleep times for users that want to get a certain amount of hours of sleep.
+
+<br>
+
+***
+
+
+# Conclusion of Analysis
+
+<br>
+
+<p align="center">
+
+  <img width="800" height="400" src="time-flat-lay.webp">
+  
+</p>
+
+<br>
+
+### Content Recomendations for improving the Time Bellabeat product
+  
+<p> On average users take 7406 steps daily this is 2594 less than the daily recommended amount by [Centers for Disease Control and Prevention (CDC)](https://www.cdc.gov/diabetes/prevention/pdf/postcurriculum_session8.pdf). Bellabeat's Time product could add features to encourage users to reach this goal such as reminders and notifications updating them on their total steps taken for the day, and badges anytime they reach a milestone to gamify the experience. On average users are most active around 6pm so Bellabeat could focus their notifications around this time which is when most people get off work/school and have more time to be active. Although this feature can be marketed to everyone, the addition of a gamified feature to keep track of your daily activity will be popular when marketed to a younger audience.</p>
+
+<br>  
+  
+<p> Through the analysis on sleep data of Fitbit users we found that on average it takes them 39 minutes to go to sleep. Adding a feature that shows users how long it takes them to get to sleep can help them make better decision on when they go to sleep to achieve their preferred hours of sleep. Adding notifications to remind them of when they should go to sleep could also improve their quality of sleep so that they reinforce their circadian rhythm. This will also help market to people who have trouble sleeping or want to improve their quality of sleep.</p>
+
+ <br> 
+ 
+<p> When plotting the daily total Steps taken vs Calories burned we found a positive correlation indicating that the more steps users take the more calories they burn. Bellabeat can use this data to keep its users updated on their progress towards losing calories to keep users motivated and engaged with the Time product. This can be one of Time's most market feature towards a market audience of people that are trying to lose weight.</p>
+
+<br>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
